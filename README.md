@@ -7,3 +7,6 @@ Set
 ```
 calico_node_ignorelooserpf: true
 ```
+
+## Credits
+https://superuser.com/questions/1307342/iptables-route-some-traffic-through-tunnel
