@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+ip addr flush dev wg0
+wg set wg0 fwmark 9
+{% for host in ansible_play_hosts %}
+{% if hostvars[host].wireguard_host_index.stdout != wireguard_host_index.stdout %}
+ip route del {{ hostvars[host]['ansible_default_ipv4']['address'] }}/32 dev wg0 table 200 src {{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }} || true
+ip route add {{ hostvars[host]['ansible_default_ipv4']['address'] }}/32 dev wg0 table 200 src {{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
+{% endif %}
+{% endfor %}
+ip rule del priority 32000 fwmark 9 lookup main || true
+ip rule del priority 32100 lookup 200 || true
+ip rule add priority 32000 fwmark 9 lookup main
+ip rule add priority 32100 lookup 200

@@ -1,0 +1,14 @@
+[Interface] 
+PrivateKey = {{wireguard_private_key.stdout}}
+ListenPort = 51820
+Address = 192.168.5.{{ wireguard_host_index.stdout }}/24
+
+{% for host in ansible_play_hosts %}
+{% if hostvars[host].wireguard_host_index.stdout != wireguard_host_index.stdout %}
+[Peer] 
+PublicKey = {{ hostvars[host].wireguard_public_key.stdout }}
+Endpoint = {{ hostvars[host]['ansible_default_ipv4']['address'] }}:51820
+AllowedIPs = {{ hostvars[host]['ansible_default_ipv4']['address'] }}/32
+
+{% endif %}
+{% endfor %}

@@ -1,0 +1,63 @@
+---
+- name: do facts module to get latest information
+  setup:
+- name: Copy script
+  copy:
+    src: "{{ role_path }}/files/install.sh"
+    dest: /tmp/install.sh
+    mode: 0777
+- name: Loose rp
+  sysctl:
+    name: "net.ipv4.conf.{{ansible_default_ipv4.interface}}.rp_filter"
+    value: 2
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
+- name: Install Wireguard 
+  command: bash /tmp/install.sh
+- name: Creates directory
+  file: path=/etc/wireguard/ state=directory
+- name: Copy modules
+  copy:
+    src: "{{ role_path }}/files/wireguard.conf"
+    dest: /etc/modules-load.d/wireguard.conf
+    mode: 0744
+- name: Generate keys
+  shell: "wg genkey | tee privatekey | wg pubkey > publickey-{{inventory_hostname}}"
+  args:
+    chdir: /etc/wireguard/
+- name: Register public keys
+  shell: "cat /etc/wireguard/publickey-{{inventory_hostname}}"
+  register: wireguard_public_key
+- name: Register private keys
+  shell: "cat /etc/wireguard/privatekey"
+  register: wireguard_private_key
+- name: Register host index
+  shell: "echo '{{ansible_play_hosts.index(inventory_hostname) + 1}}'"
+  register: wireguard_host_index
+- name: Copy install script
+  template:
+    src: "install.sh.j2"
+    dest: "/etc/wireguard/install.sh"
+    mode: '0777'
+- name: Copy config
+  template:
+    src: "myconfig.conf.j2"
+    dest: "/etc/wireguard/wg0.conf"
+- name: Copy routes
+  template:
+    src: "routes.sh.j2"
+    dest: "/etc/wireguard/routes.sh"
+    mode: '0777'
+- name: Set up tunnel
+  shell: "/etc/wireguard/install.sh"
+- name: Copy systemd unit
+  copy:
+    src: "{{ role_path }}/files/wireguard-conf.service"
+    dest: /etc/systemd/system/wireguard-conf.service
+    mode: 0777
+- name: enable wireguard-conf.service
+  systemd:
+    name: wireguard-conf
+    enabled: yes
